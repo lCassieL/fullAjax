@@ -1,6 +1,6 @@
 <?php
 
-class List_Controller extends CI_Controller {
+class List_controller extends CI_Controller {
 
 	public function __construct() {
         parent::__construct();

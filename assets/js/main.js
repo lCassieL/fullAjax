@@ -1,126 +1,88 @@
-function toggleCompleted(element, id) {
-    let save_onclick = element.onclick;
-    element.onclick = '';
+function toggleStatus(element, id, status) {
     var xhr = new XMLHttpRequest();
-        var body = 'id=' + encodeURIComponent(id);
-        xhr.open('POST', location.origin + '/main/completed', true);
-        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-        xhr.onreadystatechange = function () {
+    var body = 'id=' + encodeURIComponent(id);
+    status = Number(status) == 1 ? 0 : 1;
+    xhr.open('PUT', location.origin + '/list_controller/toggle/' + id + '/' + status, true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.onreadystatechange = function () {
         if (xhr.readyState === 4 && xhr.status === 200) {
-            element.classList.toggle("btn-outline-secondary");
-            element.classList.toggle("btn-success");
-            element.onclick = save_onclick;
+            element.classList.toggle("btn-secondary");
+            element.classList.toggle("btn-primary");
+            filterBy();
         }
-        };
-        xhr.send(body);
+    };
+    xhr.send(body);
 }
 
-function filterByCompleted(completed) {
-    checkActived(completed);
+function deletePurchase(id) {
+    var xhr = new XMLHttpRequest();
+    var body = 'id=' + encodeURIComponent(id);
+    xhr.open('DELETE', location.origin + '/list_controller/delete_purchase/' + id, true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            filterBy();
+        }
+    };
+    xhr.send(body);
+}
+
+function filterBy() {
+    let filter = document.getElementById("select_filter").value;
+    let status = '';
     let all = document.getElementById('all');
     let incompl = document.getElementById('incomplete');
     let compl = document.getElementById('completed');
-    let save_all_onclick = all.onclick;
-    let save_incompl_onclick = incompl.onclick;
-    let save_compl_onclick = compl.onclick;
-    all.onclick = incompl.onclick = compl.onclick = '';
+    status = all.classList.contains('text-primary') ? 'all' : status;
+    status = incompl.classList.contains('text-primary') ? 0 : status;
+    status = compl.classList.contains('text-primary') ? 1 : status;
     var xhr = new XMLHttpRequest();
-        var body = '';
-        xhr.open('POST', location.origin + '/list_controller/status/'+ completed, true);
-        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-        xhr.onreadystatechange = function () {
+    var body = '';
+    xhr.open('GET', location.origin + '/list_controller/status/' + status + '/' + filter, true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.onreadystatechange = function () {
         if (xhr.readyState === 4 && xhr.status === 200) {
             var json = xhr.responseText;
             var goals = JSON.parse(json);
             if (goals) {
-                //updateAmountInFilters(goals, all, incompl, compl);
-                //updateListOfGoals(goals, completed);
-                console.log(goals);
-                all.onclick = save_all_onclick;
-                incompl.onclick = save_incompl_onclick;
-                compl.onclick = save_compl_onclick;
+                updateListOfGoals(goals['purchases']);
             }
         }
-        };
-        xhr.send(body);
+    };
+    xhr.send(body);
 }
 
-function updateListOfGoals(goals, completed) {
+function updateListOfGoals(goals) {
     let str = '';
     goals.forEach(function(goal, index, arr) {
-        if(Number(goal['completed']) != completed && completed != 'all') return;
-        str += `<tr style='cursor: pointer;' onclick="window.location='/main/goal/` + goal['id'] + `';" class='`+ (Number(goal['completed']) ? 'text-muted' : '') +`'>` +
-                "<td><i style='margin-right:10px;' class='fa fa-check " + getCheckClassCompleted(goal['completed']) + " '></i>" + goal['title'] + "</td>" +
-                "<td>" + showDate(goal['due_date']) + "</td>" +
-                "<td><i class='" + getArrowClassPriority(goal['priority']) + "'></i>"+ " " + getStringPriority(goal['priority']) + " </td>" +
+        str += `<tr class='w-50 `+ (Number(goal['status']) ? 'text-muted' : '') +`'>` +
+                "<td>" + goal['name'] + "</td>" +
+                "<td>" + goal['category'] + "</td>" +
+                "<td>" + (Number(goal['status']) ? 'bought' : 'not bought') + "</td>" +
+                "<td>" + showDate(goal['created']) + "</td>" +
+                "<td style='text-align:center;'>" +
+                    '<button type="button" class="btn ' + (Number(goal['status']) ? "btn-primary" : "btn-secondary") + '" style="cursor: pointer;" onclick="toggleStatus(this, ' + goal['id'] + ', ' + goal['status'] + ')">' +
+                        '<i class="fa fa-check"></i>' +
+                    '</button>' +
+                '</td>' +
+                "<td style='text-align:center;'>" +
+                    '<button type="button" class="btn btn-danger" style="cursor: pointer;" onclick="deletePurchase(' + goal['id'] + ')">' +
+                        '<i class="fa fa-trash"></i>' +
+                    '</button>' +
+                "</td>" +
               "</tr>";
     });
     let showGoals = document.getElementById('showGoals');
     showGoals.innerHTML = str;
 }
 
-function updateAmountInFilters(goals, all, incompl, compl) {
-    let completed = 0;
-    let incomplete = 0;
-    goals.forEach(function(goal, index,arr) {
-        if(Number(goal['completed'])) {
-            completed++;
-        } else {
-            incomplete++;
-        }
-    });
-    all.innerHTML = "All "+ goals.length;
-    incompl.innerHTML = "Incomplete "+ incomplete;
-    compl.innerHTML = "Complete "+ completed;
-}
-
-function showDate(date) {
+function showDate(date_string) {
+    let [date, time] = date_string.split(" "); 
     let [year, month, day] = date.split("-");
-    return [day, month, year].join('.');
-}
-
-function getCheckClassCompleted(completed) {
-    switch(completed) {
-        case '0':
-            return 'text-muted';
-            break;
-        case '1':
-            return 'text-success';
-            break;
-    }
-    return false;
-}
-
-function getStringPriority(priority_number) {
-    switch(priority_number) {
-        case '1':
-            return 'High';
-            break;
-        case '2':
-            return 'Medium';
-            break;
-        case '3':
-            return 'Low';
-            break;
-    }
-    return false;
-    
-}
-
-function getArrowClassPriority(priority_number) {
-    switch(priority_number) {
-        case '1':
-            return 'fa fa-arrow-up text-danger';
-            break;
-        case '2':
-            return 'fa fa-arrow-up text-warning';
-            break;
-        case '3':
-            return 'fa fa-arrow-down text-primary';
-            break;
-    }
-    return false;
-    
+    let [hour, minute, second] = time.split(":");
+    let result = [day, month, year].join('.');
+    result += " " + [hour, minute].join(':');
+    return result;
 }
 
 function checkActived(completed) {
@@ -136,7 +98,7 @@ function checkActived(completed) {
             compl.classList.remove('text-primary');
             compl.classList.add('text-muted');
             break;
-        case true:
+        case 1:
             compl.classList.add('text-primary');
             compl.classList.remove('text-muted');
             incompl.classList.remove('text-primary');
@@ -144,7 +106,7 @@ function checkActived(completed) {
             all.classList.remove('text-primary');
             all.classList.add('text-muted');
             break;
-        case false:
+        case 0:
             incompl.classList.add('text-primary');
             incompl.classList.remove('text-muted');
             all.classList.remove('text-primary');
@@ -153,41 +115,76 @@ function checkActived(completed) {
             compl.classList.add('text-muted');
             break;    
     }
+    filterBy();
 }
 
-function validateForm() {
-    let form =  document.forms["goalForm"];
-    let title = form["title"];
-    let description = form["description"];
-    let due_date = form["due_date"];
-    title.classList.remove('is-invalid');
-    description.classList.remove('is-invalid');
-    due_date.classList.remove('is-invalid');
-    let regex_title = /^[a-zA-Z0-9!#$%^&*\'\/{}|?~+=\-_.` ]+$/;
-    let regex_description = /^[a-zA-Z0-9!#$%^&*\'\/{}|?~+=\-_.` ]+$/;
-    if( !((title.value.length < 80) && (title.value.length > 0) && (regex_title.test(title.value))) ) {
-        title.classList.add('is-invalid');
+function createPurchase() {
+    let form =  document.forms["createPurchaseForm"];
+    let name_field = form["name"];
+    let category_field = form["category_select"];
+    if(!category_field.value) {
+        $('#purchase_category_error').html('you need to create at least one category');
+        $('#category_select').addClass('is-invalid');
         return false;
     }
+    var starttime = new Date();
+    var isotime = new Date((new Date(starttime)).toISOString() );
+    var fixedtime = new Date(isotime.getTime()-(starttime.getTimezoneOffset()*60000));
+    var formatedMysqlString = fixedtime.toISOString().slice(0, 19).replace('T', ' ');
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', location.origin + '/list_controller/create_purchase', true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            filterBy();
+            $('#addPurchase').modal('hide');
+            name_field.value = '';
+        } else if(xhr.readyState === 4 && xhr.status === 400) {
+            var json = xhr.responseText;
+            var respond = JSON.parse(json);
+            $('#purchase_name_error').html(respond['message']);
+            $('#purchase_name').addClass('is-invalid');
+        }
+    };
+    xhr.send(JSON.stringify({name : name_field.value, category : category_field.value, date : formatedMysqlString}));
+    return false;
+}
 
-    let description_stripped = description.value.replace(/\s{2,}/g,' ').replace(/[\t\n]/g,' ');
-    if( !((description_stripped.length < 500) && (description.value.length > 0) && (regex_description.test(description_stripped))) ) {
-        description.classList.add('is-invalid');
-        return false;
-    }
+function createCategory() {
+    let form =  document.forms["createCategoryForm"];
+    let name_field = form["category_name"];
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', location.origin + '/list_controller/create_category', true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            var json = xhr.responseText;
+            var respond = JSON.parse(json);
+            $("#select_filter").append("<option value='"+respond['id']+"'>"+respond['name']+"</option>");
+            $("#category_select").append("<option value='"+respond['id']+"'>"+respond['name']+"</option>");
+            $('#addCategory').modal('hide');
+            name.value = '';
+        } else if(xhr.readyState === 4 && xhr.status === 400) {
+            var json = xhr.responseText;
+            var respond = JSON.parse(json);
+            $('#category_error').html(respond['message']);
+            $('#category_name').addClass('is-invalid');
+        }
+    };
+    xhr.send(JSON.stringify({name : name_field.value}));
+    return false;
+}
 
-    let today = new Date();
-    let dd = String(today.getDate()).padStart(2, '0');
-    let mm = String(today.getMonth() + 1).padStart(2, '0');
-    let yyyy = today.getFullYear();
-    today = yyyy + '-' + mm + '-' + dd;
-    let d1 = Date.parse(today);
-    let d2 = Date.parse(due_date.value);
-    let parts_date = due_date.value.split('-');
-    let year = parts_date[0];
-    if (!(d2 >= d1 && Number(year) < 2101)) {
-        due_date.classList.add('is-invalid');
-        return false;
-    }
-    return true;
-  }
+function clearCategoryModal() {
+    $('#category_error').html('');
+    $('#category_name').removeClass('is-invalid');
+    $('#category_name').val('');
+}
+
+function clearPurchaseModal() {
+    $('#purchase_name_error').html('');
+    $('#purchase_name').removeClass('is-invalid');
+    $('#purchase_name').val('');
+    $('#purchase_category_error').html('');
+    $('#category_select').removeClass('is-invalid');
+}

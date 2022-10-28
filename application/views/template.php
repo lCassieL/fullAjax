@@ -14,8 +14,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <header class="card" style="margin-bottom:60px;">
         <div class="navbar-brand" href="#">
             <!-- <img src="/docs/4.0/assets/brand/bootstrap-solid.svg" width="30" height="30" class="d-inline-block align-top" alt=""> -->
-            <strong>BeFocused</strong>
-            <span style="cursor: pointer;" onclick="window.location='/main/index';" class="text-muted float-right"><i style="margin-right:7px;" class="fa fa-info"></i>About</span>
+            <strong>List</strong>
         </div>
     </header>
     <div style="width:70%;margin: 0px auto;min-height:100%;height:100%;">
